@@ -103,4 +103,9 @@ extern NSInteger const ATLNumberOfSectionsBeforeFirstMessageSection;
  */
 - (LYRMessage *)messageAtCollectionViewSection:(NSInteger)collectionViewSection;
 
+/**
+ @abstract Fetches the `NSIndexPath` corresponding to a 'LYRMessage' object in the data source.
+ */
+- (NSIndexPath *)indexPathForMessage:(LYRMessage *)message;
+
 @end

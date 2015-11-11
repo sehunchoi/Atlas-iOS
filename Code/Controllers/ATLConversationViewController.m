@@ -44,6 +44,7 @@
 
 @property (nonatomic) BOOL showingMoreMessagesIndicator;
 @property (nonatomic) BOOL hasAppeared;
+@property (nonatomic) NSIndexPath *indexPathToScroll;
 
 @property (nonatomic) ATLLocationManager *locationManager;
 @property (nonatomic) BOOL shouldShareLocation;
@@ -175,6 +176,10 @@ static NSInteger const ATLPhotoActionSheet = 1000;
     
     if (self.addressBarController && !self.addressBarController.isDisabled) {
         [self.addressBarController.addressBarView.addressBarTextView becomeFirstResponder];
+    }
+    
+    if (self.indexPathToScroll) {
+        [self.collectionView scrollToItemAtIndexPath:self.indexPathToScroll atScrollPosition:UICollectionViewScrollPositionCenteredVertically animated:YES];
     }
 }
 
@@ -1032,6 +1037,12 @@ static NSInteger const ATLPhotoActionSheet = 1000;
             });
         }
     });
+}
+
+- (void)scrollToMessage:(LYRMessage *)message
+{
+    NSIndexPath *indexPath = [self.conversationDataSource indexPathForMessage:message];
+    self.indexPathToScroll = indexPath;
 }
 
 #pragma mark - Delegate

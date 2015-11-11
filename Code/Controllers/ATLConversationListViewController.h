@@ -35,8 +35,9 @@
  @abstract Informs the delegate that an `LYRConversation` was selected from the conversation list.
  @param conversationListViewController The `LYRConversationListViewController` in which the selection occurred.
  @param conversation The `LYRConversation` object that was selected.
+ @param message The `LYRMessage` object that was displayed in the tableview.
  */
-- (void)conversationListViewController:(ATLConversationListViewController *)conversationListViewController didSelectConversation:(LYRConversation *)conversation;
+- (void)conversationListViewController:(ATLConversationListViewController *)conversationListViewController didSelectConversation:(LYRConversation *)conversation withDisplayMessage:(LYRMessage *)message;
 
 @optional
 
@@ -256,6 +257,14 @@
  @default `YES`.
  */
 @property (nonatomic, assign) BOOL shouldDisplaySearchController;
+
+/**
+ @abstract A boolean value that determines if the controller should show a search bar and search display controller.
+ @discussion When `YES`, a search bar with a search display controller is shown on top of the tableview.
+ Should be set before the controller is presented on screen.
+ @default `YES`.
+ */
+@property (nonatomic, assign) BOOL shouldFullTextSearchContent;
 
 ///------------------------------
 /// @name Reloading Conversations

@@ -28,10 +28,21 @@ static NSString *const ATLVideoMIMETypePlaceholderText = @"Attachment: Video";
 static NSString *const ATLLocationMIMETypePlaceholderText = @"Attachment: Location";
 static NSString *const ATLGIFMIMETypePlaceholderText = @"Attachment: GIF";
 
+NSArray *ATLPartsWithExistingConversation(NSArray *array)
+{
+    NSMutableArray *parts = [NSMutableArray new];
+    for (LYRMessagePart *part in array) {
+        if (part.message.conversation) {
+            [parts addObject:part];
+        }
+    }
+    return parts;
+}
+
 @interface ATLConversationListViewController () <UIActionSheetDelegate, LYRQueryControllerDelegate, UISearchBarDelegate, UISearchControllerDelegate, UISearchDisplayDelegate>
 
 @property (nonatomic) LYRQueryController *queryController;
-@property (nonatomic) LYRQueryController *searchQueryController;
+@property (nonatomic) NSArray *searchDisplayDataSource;
 @property (nonatomic) LYRConversation *conversationToDelete;
 @property (nonatomic) LYRConversation *conversationSelectedBeforeContentChange;
 @property (nonatomic) UISearchBar *searchBar;
@@ -86,6 +97,7 @@ NSString *const ATLConversationListViewControllerDeletionModeGlobal = @"Global";
     _allowsEditing = YES;
     _rowHeight = 76.0f;
     _shouldDisplaySearchController = YES;
+    _shouldFullTextSearchContent = NO;
 }
 
 - (id)init
@@ -252,6 +264,9 @@ NSString *const ATLConversationListViewControllerDeletionModeGlobal = @"Global";
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
+    if (self.searchController.isActive) {
+        return self.searchDisplayDataSource.count;
+    }
     return [self.queryController numberOfObjectsInSection:section];
 }
 
@@ -273,7 +288,19 @@ NSString *const ATLConversationListViewControllerDeletionModeGlobal = @"Global";
 
 - (void)configureCell:(UITableViewCell<ATLConversationPresenting> *)conversationCell atIndexPath:(NSIndexPath *)indexPath
 {
-    LYRConversation *conversation = [self.queryController objectAtIndexPath:indexPath];
+    LYRConversation *conversation;
+    LYRMessagePart *messagePart;
+    if (self.searchController.isActive) {
+        id object = [self.searchDisplayDataSource objectAtIndex:indexPath.row];
+        if ([object isKindOfClass:[LYRMessagePart class]]) {
+            messagePart = (LYRMessagePart*)object;
+            conversation = messagePart.message.conversation;
+        } else {
+            conversation = (LYRConversation *)object;
+        }
+    } else {
+        conversation = [self.queryController objectAtIndexPath:indexPath];
+    }
     [conversationCell presentConversation:conversation];
     
     if (self.displaysAvatarItem) {
@@ -293,11 +320,15 @@ NSString *const ATLConversationListViewControllerDeletionModeGlobal = @"Global";
     }
     
     NSString *lastMessageText;
-    if ([self.dataSource respondsToSelector:@selector(conversationListViewController:lastMessageTextForConversation:)]) {
-        lastMessageText = [self.dataSource conversationListViewController:self lastMessageTextForConversation:conversation];
-    }
-    if (!lastMessageText) {
-        lastMessageText = [self defaultLastMessageTextForConversation:conversation];
+    if (self.searchController.isActive && messagePart) {
+        lastMessageText = [[NSString alloc] initWithData:messagePart.data encoding:NSUTF8StringEncoding];
+    } else {
+        if ([self.dataSource respondsToSelector:@selector(conversationListViewController:lastMessageTextForConversation:)]) {
+            lastMessageText = [self.dataSource conversationListViewController:self lastMessageTextForConversation:conversation];
+        }
+        if (!lastMessageText) {
+            lastMessageText = [self defaultLastMessageTextForConversation:conversation];
+        }
     }
     [conversationCell updateWithLastMessageText:lastMessageText];
 }
@@ -369,9 +400,21 @@ NSString *const ATLConversationListViewControllerDeletionModeGlobal = @"Global";
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    if ([self.delegate respondsToSelector:@selector(conversationListViewController:didSelectConversation:)]){
-        LYRConversation *conversation = [self.queryController objectAtIndexPath:indexPath];
-        [self.delegate conversationListViewController:self didSelectConversation:conversation];
+    if ([self.delegate respondsToSelector:@selector(conversationListViewController:didSelectConversation:withDisplayMessage:)]){
+        LYRConversation *conversation;
+        LYRMessage *message;
+        if (self.searchController.isActive) {
+            id object = [self.searchDisplayDataSource objectAtIndex:indexPath.row];
+            if ([object isKindOfClass:[LYRMessagePart class]]) {
+                conversation = ((LYRMessagePart *)object).message.conversation;
+                message = ((LYRMessagePart *)object).message;
+            } else {
+                conversation = (LYRConversation*)object;
+            }
+        } else {
+            conversation = [self.queryController objectAtIndexPath:indexPath];
+        }
+        [self.delegate conversationListViewController:self didSelectConversation:conversation withDisplayMessage:message];
     }
 }
 
@@ -474,31 +517,26 @@ NSString *const ATLConversationListViewControllerDeletionModeGlobal = @"Global";
             if (![searchString isEqualToString:controller.searchBar.text]) return;
             NSSet *participantIdentifiers = [filteredParticipants valueForKey:@"participantIdentifier"];
             
-            LYRQuery *query = [LYRQuery queryWithQueryableClass:[LYRConversation class]];
-            query.predicate = [LYRPredicate predicateWithProperty:@"participants" predicateOperator:LYRPredicateOperatorIsIn value:participantIdentifiers];
-            query.sortDescriptors = @[[NSSortDescriptor sortDescriptorWithKey:@"lastMessage.receivedAt" ascending:NO]];
+            LYRQuery *participantQuery = [LYRQuery queryWithQueryableClass:[LYRConversation class]];
+            participantQuery.predicate = [LYRPredicate predicateWithProperty:@"participants" predicateOperator:LYRPredicateOperatorIsIn value:participantIdentifiers];
+            participantQuery.sortDescriptors = @[[NSSortDescriptor sortDescriptorWithKey:@"lastMessage.receivedAt" ascending:NO]];
             
             NSError *error;
-            self.searchQueryController = [self.layerClient queryControllerWithQuery:query error:&error];
-            if (!self.queryController) {
-                NSLog(@"LayerKit failed to create a query controller with error: %@", error);
-                return;
+            NSOrderedSet *participantResults = [self.layerClient executeQuery:participantQuery error:&error];
+            self.searchDisplayDataSource = [participantResults array].mutableCopy;
+            
+            if (self.shouldFullTextSearchContent) {
+                LYRQuery *contentQuery = [LYRQuery queryWithQueryableClass:[LYRMessagePart class]];
+                contentQuery.predicate = [LYRPredicate predicateWithProperty:@"textContent" predicateOperator:LYRPredicateOperatorMatch value:searchString];
+                NSOrderedSet *contentResults = [self.layerClient executeQuery:contentQuery error:&error];
+
+                self.searchDisplayDataSource = [self.searchDisplayDataSource arrayByAddingObjectsFromArray:ATLPartsWithExistingConversation([contentResults array])];
             }
 
-            [self.searchQueryController execute:&error];
             [self.searchController.searchResultsTableView reloadData];
         }];
     }
     return NO;
-}
-
-- (LYRQueryController *)queryController
-{
-    if (self.searchController.isActive) {
-        return _searchQueryController;
-    } else {
-        return _queryController;
-    }
 }
 
 #pragma mark - Helpers

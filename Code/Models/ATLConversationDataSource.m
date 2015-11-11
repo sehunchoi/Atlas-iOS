@@ -130,4 +130,9 @@ NSInteger const ATLQueryControllerPaginationWindow = 30;
     return message;
 }
 
+- (NSIndexPath *)indexPathForMessage:(LYRMessage *)message
+{
+    return [self collectionViewIndexPathForQueryControllerIndexPath:[self.queryController indexPathForObject:message]];
+}
+
 @end

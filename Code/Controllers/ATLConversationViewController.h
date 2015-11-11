@@ -261,6 +261,13 @@ typedef NS_ENUM(NSUInteger, ATLAvatarItemDisplayFrequency) {
  */
 - (void)sendMessage:(LYRMessage *)message;
 
+/**
+ @abstract Scrolls the conversation view to the specified message.
+ @discussion This method can be used after enabling the full text match search property on the `LYRClient` and searching for a specific message.
+ @param message The Message object to scroll to.
+ */
+- (void)scrollToMessage:(LYRMessage *)message;
+
 ///---------------------------
 /// @name Configuring Behavior
 ///---------------------------
