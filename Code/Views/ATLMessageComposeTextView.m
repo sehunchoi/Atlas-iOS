@@ -37,17 +37,17 @@ static NSString *const ATLPlaceholderText = @"Enter Message";
     self = [super init];
     if (self) {
         
-        self.attributedText = [[NSAttributedString alloc] initWithString:@"" attributes:@{NSFontAttributeName : [UIFont systemFontOfSize:17],
+        self.attributedText = [[NSAttributedString alloc] initWithString:@"" attributes:@{NSFontAttributeName : [UIFont fontWithName:@"AvenirNext-Regular" size:16.0],
                                                                                          NSForegroundColorAttributeName : ATLGrayColor()}];
         self.textContainerInset = UIEdgeInsetsMake(4, 4, 4, 4);
-        self.font = [UIFont systemFontOfSize:17];
+        self.font = [UIFont fontWithName:@"AvenirNext-Regular" size:16.0];
         self.dataDetectorTypes = UIDataDetectorTypeLink;
         self.placeholder = ATLPlaceholderText;
 
         self.placeholderLabel = [UILabel new];
         self.placeholderLabel.font = self.font;
         self.placeholderLabel.text = ATLLocalizedString(self.placeholder, self.placeholder, nil);;
-        self.placeholderLabel.textColor = [UIColor lightGrayColor];
+        self.placeholderLabel.textColor = [UIColor colorWithRed:129.0/255.0 green:54.0/255.0 blue:255.0/255.0 alpha:1.0];
         self.placeholderLabel.lineBreakMode = NSLineBreakByTruncatingTail;
         [self addSubview:self.placeholderLabel];
 
