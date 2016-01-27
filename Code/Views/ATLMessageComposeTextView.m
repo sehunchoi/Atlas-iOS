@@ -47,7 +47,7 @@ static NSString *const ATLPlaceholderText = @"Enter Message";
         self.placeholderLabel = [UILabel new];
         self.placeholderLabel.font = self.font;
         self.placeholderLabel.text = ATLLocalizedString(self.placeholder, self.placeholder, nil);;
-        self.placeholderLabel.textColor = [UIColor colorWithRed:129.0/255.0 green:54.0/255.0 blue:255.0/255.0 alpha:1.0];
+        self.placeholderLabel.textColor = [UIColor colorWithRed:188.0/255.0 green:189.0/255.0 blue:193.0/255.0 alpha:1.0];
         self.placeholderLabel.lineBreakMode = NSLineBreakByTruncatingTail;
         [self addSubview:self.placeholderLabel];
 
